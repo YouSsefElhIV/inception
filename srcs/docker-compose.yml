@@ -1,0 +1,110 @@
+services:
+ mariadb-service:
+  build: ./requirements/mariadb
+  image: mariadb:inception
+  volumes:
+   - /home/yel-haya/data/database:/var/lib/mysql/
+  networks:
+   - inception
+  env_file:
+   - .env
+  restart: always
+
+ nginx-service:
+  depends_on:
+   - wordpress-service
+  build: ./requirements/nginx
+  image: nginx:inception
+  ports:
+   - "443:443"
+  volumes:
+   - /home/yel-haya/data/wordpress:/var/www/html
+  networks:
+   - inception
+  restart: always
+ 
+ wordpress-service:
+  depends_on:
+   - mariadb-service
+   - redis-service
+  build: ./requirements/wordpress
+  image: wordpress:inception
+  volumes:
+   - /home/yel-haya/data/wordpress:/var/www/html
+  networks:
+   - inception
+  env_file:
+   - .env
+  restart: always
+
+ adminer-service:
+  depends_on:
+   - mariadb-service
+  build: ./requirements/bonus/adminer
+  image: adminer:inception
+  ports:
+   - "80:80"
+  networks:
+   - inception
+  restart: always
+
+ cadvisor-service:
+  build: ./requirements/bonus/cadvisor
+  image: cadvisor:inception
+  volumes:
+   - /var/lib/docker:/var/lib/docker:ro
+   - /:/rootfs:ro
+   - /sys:/sys:ro
+   - /var/run:/var/run:ro
+   - /dev/disk:/dev/disk:ro
+  privileged: true
+  ports:
+   - "8080:8080"
+  networks:
+   - inception
+  restart: always
+
+ static_web-service:
+  build: ./requirements/bonus/static_web
+  image: static_web:inception
+  ports:
+   - "5555:5555"
+  volumes:
+   - /home/yel-haya/Desktop/inception/srcs/requirements/bonus/static_web:/var/www/static_web
+  networks:
+   - inception
+  restart: always
+
+ redis-service:
+  build: ./requirements/bonus/redis
+  image: redis:inception
+  networks:
+   - inception
+  env_file:
+   - .env
+  restart: always
+
+ ftp-service:
+  depends_on:
+   - wordpress-service
+  build:
+   context: ./requirements/bonus/ftp
+   args:
+    FTP_USER: ${FTP_USER}
+    FTP_PASSWORD: ${FTP_PASSWORD}
+  image: ftp:inception
+  networks:
+   - inception
+  env_file:
+   - .env
+  volumes:
+   - /home/yel-haya/data/wordpress:/home/yel-hayaftp
+  ports:
+   - "20:20"
+   - "21:21"
+   - "30000-31000:30000-31000"
+  restart: always
+ 
+networks:
+ inception:
+  driver: bridge
